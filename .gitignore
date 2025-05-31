@@ -1,0 +1,50 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyo
+*.so
+
+# Virtual environments
+.venv/
+env/
+venv/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*.sublime*
+
+# Python environment metadata
+*.log
+pip-log.txt
+
+# SQLite / temporary dbs (not used here but common)
+*.db
+
+# Docker
+*.pid
+*.pid.lock
+
+# VSCode debug artifacts
+*.code-workspace
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Python coverage/testing
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+
+# MyPy / Linting
+.mypy_cache/
+.pyre/
+ruff_cache/
