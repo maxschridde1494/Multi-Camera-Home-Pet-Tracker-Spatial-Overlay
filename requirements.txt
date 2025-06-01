@@ -2,3 +2,5 @@ fastapi
 uvicorn[standard]
 sqlmodel
 asyncpg
+opencv-python
+python-dotenv

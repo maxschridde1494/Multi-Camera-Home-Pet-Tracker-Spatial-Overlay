@@ -7,8 +7,22 @@ services:
       - "8000:8000"
     depends_on:
       - db
+      - proxy
+    environment:
+      - CAM_PROXY_CONFIG=${CAM_PROXY_CONFIG}
     volumes:
       - ./app:/app
+      - ./snapshots:/app/snapshots
+  
+  proxy:
+    image: bluenviron/mediamtx:latest
+    container_name: rtsp-proxy
+    restart: unless-stopped
+    ports:
+      - "8554:8554/tcp"
+      - "8554:8554/udp"
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
 
   db:
     image: postgres:17

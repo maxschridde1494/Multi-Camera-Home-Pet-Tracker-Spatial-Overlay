@@ -23,9 +23,7 @@ dist/
 # Python environment metadata
 *.log
 pip-log.txt
-
-# SQLite / temporary dbs (not used here but common)
-*.db
+.env*
 
 # Docker
 *.pid
@@ -48,3 +46,7 @@ htmlcov/
 .mypy_cache/
 .pyre/
 ruff_cache/
+
+# MediaMTX
+mediamtx.yml
+*snapshots

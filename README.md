@@ -51,3 +51,35 @@ Render floorplan with:
 - Daily summary report ("Dog spent 72% of time in Living Room")
 - Multi-animal support (if another pet is added)
 - Simple web dashboard or replay viewer
+
+## Configuration
+
+Before running the application, you need to set up two configuration files:
+
+### 1. MediaMTX Configuration
+Copy `mediamtx.sample.yml` to `mediamtx.yml` and configure your RTSP stream settings:
+```bash
+cp mediamtx.sample.yml mediamtx.yml
+```
+
+### 2. Environment Variables
+Copy `.env.sample` to `.env` and configure your camera streams:
+```bash
+cp .env.sample .env
+```
+Edit `.env` to include your RTSP camera configuration in the following format:
+```
+CAM_PROXY_CONFIG=[{"name":"office","stream_url":"rtsp://host.docker.internal:8554/office"},...]
+```
+
+## Setup & Running
+
+### Start the Application
+```bash
+docker-compose up --build
+```
+
+### Tear Down
+```bash
+docker-compose down
+```
