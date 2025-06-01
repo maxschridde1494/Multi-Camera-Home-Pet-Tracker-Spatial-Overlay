@@ -1,23 +1,33 @@
+# app/routers/detections.py
 from fastapi import APIRouter, Depends
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
-from app.models import DetectionLog
-from app.db import SessionLocal
+from sqlmodel import Session, select
+
+from app.models.detection import Detection
+from app.db import get_session as open_session   # sync helper from db.py
 
 router = APIRouter(prefix="/detections", tags=["Detections"])
 
-async def get_session() -> AsyncSession:
-    async with SessionLocal() as session:
+
+# ───────── dependency ──────────────────────────────────────────────────────
+def get_db() -> Session:
+    """FastAPI dependency that yields a synchronous DB session."""
+    with open_session() as session:
         yield session
 
+
+# ───────── endpoints ───────────────────────────────────────────────────────
 @router.post("/")
-async def log_detection(detection: DetectionLog, session: AsyncSession = Depends(get_session)):
+def create_detection(
+    detection: Detection,
+    session: Session = Depends(get_db),
+):
     session.add(detection)
-    await session.commit()
-    await session.refresh(detection)
+    session.commit()
+    session.refresh(detection)
     return detection
 
+
 @router.get("/")
-async def list_detections(session: AsyncSession = Depends(get_session)):
-    result = await session.exec(select(DetectionLog))
-    return result.all()
+def list_detections(session: Session = Depends(get_db)):
+    result = session.execute(select(Detection))
+    return result.scalars().all()

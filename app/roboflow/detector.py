@@ -6,14 +6,13 @@ This module provides:
 - RoboflowDetectorManager: Manages multiple detectors (singleton)
 """
 
-import os
 import threading
 import time
 from datetime import datetime
-from typing import Dict, Optional
-import cv2
+from typing import Dict, Optional, List
 
 from app.utils.logger import get_logger
+from app.utils.signals import detection_made, high_confidence_detection_made, camera_connected, camera_disconnected
 from app.roboflow.client import create_client
 from app.rtsp.stream import RTSPStream
 
@@ -29,8 +28,6 @@ class RoboflowDetector:
         model_id: str,
         confidence_threshold: float = 0.9,
         interval: float = 1.0,
-        snapshot_dir: Optional[str] = None,
-        snapshot_quality: int = 85
     ):
         """Initialize the detector.
         
@@ -39,42 +36,85 @@ class RoboflowDetector:
             model_id: Roboflow model ID (e.g., "home-pet-detection/3")
             confidence_threshold: Minimum confidence for detections
             interval: Seconds between inference runs
-            snapshot_dir: Optional directory to save detection frames
-            snapshot_quality: JPEG quality for snapshots (0-100)
         """
         self.stream = stream
         self.model_id = model_id
         self.confidence_threshold = confidence_threshold
         self.interval = interval
         
-        # Snapshot configuration
-        self.snapshot_dir = snapshot_dir
-        if snapshot_dir:
-            os.makedirs(snapshot_dir, exist_ok=True)
-        self.snapshot_quality = snapshot_quality
-        
         # State
         self.running = False
-        self.frame_counter = 0
         self.client = create_client()
         self.thread: Optional[threading.Thread] = None
+        
+        # Set camera_id as an attribute for signal handlers
+        self.camera_id = stream.camera_id
 
     def start(self) -> None:
         """Start the detector thread."""
         if self.running:
-            logger.warning(f"Detector for {self.stream.camera_id} already running")
+            logger.warning(f"Detector for {self.camera_id} already running")
             return
             
         self.running = True
         self.thread = threading.Thread(target=self._loop, daemon=True)
         self.thread.start()
-        logger.info(f"[{self.stream.camera_id}] detector started")
+        logger.info(f"[{self.camera_id}] detector started")
+        
+        # Signal that camera is connected
+        camera_connected.send(self)
 
     def stop(self) -> None:
         """Stop the detector thread."""
         self.running = False
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=5.0)
+            
+        # Signal that camera is disconnected
+        camera_disconnected.send(self)
+
+    def _process_predictions(self, predictions: List[dict], frame) -> None:
+        """Process a list of predictions and emit appropriate signals.
+        
+        Args:
+            predictions: List of prediction dictionaries from Roboflow
+            frame: The frame the predictions were made on
+        """
+        current_time = datetime.now()
+        
+        for prediction in predictions:
+            # Extract basic prediction data
+            confidence = prediction["confidence"]
+            
+            # Prepare complete detection data
+            detection_data = {
+                "detection_id": prediction["detection_id"],
+                "timestamp": current_time,
+                "model_id": self.model_id,
+                "camera_id": self.camera_id,
+                "x": prediction["x"],
+                "y": prediction["y"],
+                "width": prediction["width"],
+                "height": prediction["height"],
+                "confidence": confidence,
+                "class_name": prediction["class"],
+                "class_id": prediction["class_id"]
+            }
+            
+            # Always emit detection_made signal for each prediction
+            detection_made.send(
+                self,
+                frame=frame,
+                **detection_data
+            )
+
+            # Emit high confidence signal if threshold met
+            if confidence > self.confidence_threshold:
+                high_confidence_detection_made.send(
+                    self,
+                    frame=frame,
+                    **detection_data
+                )
 
     def _loop(self) -> None:
         """Main detection loop."""
@@ -88,30 +128,9 @@ class RoboflowDetector:
                         model_id=self.model_id
                     )
 
-                    # Check for high-confidence detections
-                    if (predictions := prediction.get("predictions", [])):
-                      logger.info(f"[{self.stream.camera_id}] prediction: {prediction}")
-
-                      if predictions[0]["confidence"] > self.confidence_threshold:
-                        # Save snapshot if configured
-                        if self.snapshot_dir:
-                            # Generate timestamp in format: YYYYMMDD_HHMMSS
-                            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                            filename = f"{timestamp}_{self.stream.camera_id}_{self.frame_counter:04d}.jpg"
-                            filepath = os.path.join(self.snapshot_dir, filename)
-                            
-                            cv2.imwrite(
-                                filepath,
-                                frame,
-                                [int(cv2.IMWRITE_JPEG_QUALITY), self.snapshot_quality]
-                            )
-                            
-                            self.frame_counter += 1
-                            if self.frame_counter % 10 == 0:
-                                logger.info(
-                                    f"[{self.stream.camera_id}] "
-                                    f"Saved frame {self.frame_counter}"
-                                )
+                    # Check for predictions
+                    if predictions := prediction.get("predictions", []):
+                        self._process_predictions(predictions, frame)
                                 
                 except Exception as e:
                     logger.error(f"Error processing frame: {e}")
@@ -143,8 +162,6 @@ class RoboflowDetectorManager:
         model_id: str,
         confidence_threshold: float = 0.9,
         interval: float = 1.0,
-        snapshot_dir: Optional[str] = None,
-        snapshot_quality: int = 85
     ) -> None:
         """Add a detector for a stream.
         
@@ -153,27 +170,18 @@ class RoboflowDetectorManager:
             model_id: Roboflow model ID
             confidence_threshold: Minimum confidence for detections
             interval: Seconds between inference runs
-            snapshot_dir: Optional directory to save detection frames
-            snapshot_quality: JPEG quality for snapshots
         """
         camera_id = stream.camera_id
         
         if camera_id in self.detectors:
             logger.warning(f"Detector for {camera_id} already exists, stopping old one")
             self.stop_detector(camera_id)
-
-        # reset snapshot dir if it exists
-        if snapshot_dir and os.path.exists(snapshot_dir):
-            for file in os.listdir(snapshot_dir):
-                os.remove(os.path.join(snapshot_dir, file))
             
         detector = RoboflowDetector(
             stream=stream,
             model_id=model_id,
             confidence_threshold=confidence_threshold,
             interval=interval,
-            snapshot_dir=snapshot_dir,
-            snapshot_quality=snapshot_quality
         )
         
         detector.start()

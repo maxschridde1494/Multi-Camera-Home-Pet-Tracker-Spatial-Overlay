@@ -3,6 +3,7 @@ from app.db import init_db
 from app.routes.detections import router as detection_router
 from app.rtsp.stream import RTSPStreamManager
 from app.roboflow.detector import RoboflowDetectorManager
+from app.utils.handlers import setup_handlers
 import os
 import json
 from dotenv import load_dotenv
@@ -39,15 +40,15 @@ def start_streams():
         detector_manager.add_detector(
             stream=stream,
             model_id=os.getenv("ROBOFLOW_MODEL_ID"),
-            confidence_threshold=0.8,
-            snapshot_dir="/app/snapshots"
+            confidence_threshold=float(os.getenv("CONFIDENCE_THRESHOLD", "0.8")),
         )
 
 app = FastAPI()
 
 @app.on_event("startup")
-async def startup():
-    await init_db()
+def startup():
+    init_db()
+    setup_handlers()  # Initialize signal handlers before starting streams
     start_streams()
 
 app.include_router(detection_router)

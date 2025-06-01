@@ -1,13 +1,10 @@
-from sqlmodel import SQLModel
-from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
-from sqlalchemy.orm import sessionmaker
+from sqlmodel import SQLModel, Session, create_engine
 
-DATABASE_URL = "postgresql+asyncpg://postgres:postgres@db:5432/pettracker"
+DATABASE_URL = "postgresql+psycopg2://postgres:postgres@db:5432/pettracker"
+engine = create_engine(DATABASE_URL, echo=False)
 
-engine: AsyncEngine = create_async_engine(DATABASE_URL, echo=True)
-SessionLocal = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
+def init_db():
+    SQLModel.metadata.create_all(engine)
 
-async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+def get_session() -> Session:
+    return Session(engine)

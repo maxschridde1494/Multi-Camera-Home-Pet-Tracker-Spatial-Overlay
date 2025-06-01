@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import subprocess, threading, time, numpy as np, os
 from typing import Dict, Optional
-import cv2
 
 from app.utils.logger import get_logger
 
