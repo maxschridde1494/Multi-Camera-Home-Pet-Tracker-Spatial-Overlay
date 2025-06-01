@@ -29,7 +29,7 @@ def start_streams():
         rtsp_manager.add_stream(
             camera_id,
             url,
-            # snapshot_dir="/app/snapshots"
+            snapshot_dir="/app/snapshots"
         )
 
 app = FastAPI()

@@ -4,3 +4,4 @@ sqlmodel
 asyncpg
 opencv-python
 python-dotenv
+inference-sdk

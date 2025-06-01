@@ -15,6 +15,7 @@ from typing import Dict, Optional
 import cv2
 
 from app.utils.logger import get_logger
+from app.roboflow.client import create_client
 
 logger = get_logger(__name__)
 
@@ -111,20 +112,23 @@ class RTSPStream:
 # Snapshot writer – optional diagnostics
 # ---------------------------------------------------------------------------
 class Snapshotter:
-    """Periodically writes the latest frame from an RTSPStream to JPEG on disk."""
+    """Periodically writes frames from an RTSPStream to JPEG files on disk with incrementing counters."""
 
     def __init__(self, stream: RTSPStream, out_path: str, interval: float = 1.0, quality: int = 85):
         self.stream = stream
-        self.out_path = out_path
+        self.out_dir = os.path.dirname(out_path)  # We'll use this as the output directory
+        self.camera_id = stream.camera_id
         self.interval = interval
         self.quality = quality
         self.running = False
+        self.frame_counter = 0  # Counter for naming files
+        self.client = create_client()
 
     def start(self) -> None:
-        os.makedirs(os.path.dirname(self.out_path), exist_ok=True)
+        os.makedirs(self.out_dir, exist_ok=True)
         self.running = True
         threading.Thread(target=self._loop, daemon=True).start()
-        logger.info(f"[snapshot] {self.out_path} every {self.interval}s")
+        logger.info(f"[snapshot] saving to {self.out_dir} every {self.interval}s")
 
     def stop(self) -> None:
         self.running = False
@@ -132,9 +136,28 @@ class Snapshotter:
     def _loop(self) -> None:
         while self.running:
             frame = self.stream.get_latest_frame()
-            # logger.info(f"_loop to {self.out_path}")
             if frame is not None:
-                cv2.imwrite(self.out_path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), self.quality])
+                prediction = self.client.infer(
+                    inference_input=frame,
+                    model_id="home-pet-detection/3"
+                )
+
+                if len(prediction["predictions"]) > 0 and prediction["predictions"][0]["confidence"] > 0.9:
+                    logger.info(f"[{self.camera_id}] prediction: {prediction}")
+
+                    # Create filename with incrementing counter
+                    filename = f"{self.camera_id}_{self.frame_counter}.jpg"
+                    filepath = os.path.join(self.out_dir, filename)
+                    
+                    # Save the frame
+                    cv2.imwrite(filepath, frame, [int(cv2.IMWRITE_JPEG_QUALITY), self.quality])
+                    
+                    # Increment counter
+                    self.frame_counter += 1
+                    
+                    if self.frame_counter % 10 == 0:  # Log every 10 frames
+                        logger.info(f"[snapshot] Saved frame {self.frame_counter} for {self.camera_id}")
+                    
             time.sleep(self.interval)
 
 
