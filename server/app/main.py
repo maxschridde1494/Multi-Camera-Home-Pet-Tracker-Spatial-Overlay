@@ -40,7 +40,7 @@ def start_streams():
         detector_manager.add_detector(
             stream=stream,
             model_id=os.getenv("ROBOFLOW_MODEL_ID"),
-            confidence_threshold=float(os.getenv("CONFIDENCE_THRESHOLD", "0.8")),
+            confidence_threshold=float(os.getenv("CONFIDENCE_THRESHOLD", "0.9")),
         )
 
 app = FastAPI()

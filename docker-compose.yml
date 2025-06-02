@@ -1,8 +1,10 @@
 version: "3.9"
 
 services:
-  web:
-    build: .
+  server:
+    build: 
+      context: .
+      target: server-dev
     ports:
       - "8000:8000"
     depends_on:
@@ -15,8 +17,8 @@ services:
       - ROBOFLOW_MODEL_ID=${ROBOFLOW_MODEL_ID}
 
     volumes:
-      - ./app:/app
-      - ./snapshots:/app/snapshots
+      - ./server/app:/app
+      - ./server/snapshots:/app/snapshots
   
   proxy:
     image: bluenviron/mediamtx:latest
@@ -26,7 +28,7 @@ services:
       - "8554:8554/tcp"
       - "8554:8554/udp"
     volumes:
-      - ./mediamtx.yml:/mediamtx.yml:ro
+      - ./server/mediamtx.yml:/mediamtx.yml:ro
 
   db:
     image: postgres:17
