@@ -1,10 +1,57 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
+import { simpleFetch } from './clients/fetch'
+import { useRealTime } from './hooks/useRealTime'
+
+interface Detection {
+  id: number;
+  detection_id: string;  // UUID
+  timestamp: string;     // datetime
+  model_id: string;
+  camera_id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  confidence: number;
+  class_name: string;
+  class_id: number;
+}
 
 function App() {
   const [count, setCount] = useState(0)
+  const [detections, setDetections] = useState<Detection[]>([])
+  const realTimeUpdate = useRealTime('/ws')
+
+  useEffect(() => {
+    const fetchDetections = () => {
+      simpleFetch({
+        url: '/api/detections',
+        onSuccess: (data) => {
+          setDetections(data)
+        },
+        onError: (error) => {
+          console.error('Error fetching detections:', error)
+        }
+      })
+    }
+
+    fetchDetections()
+
+    const intervalId = setInterval(fetchDetections, 5000)
+
+    return () => clearInterval(intervalId)
+  }, []) 
+
+  useEffect(() => {
+    console.log(detections)
+  }, [detections])
+
+  useEffect(() => {
+    console.log({realTimeUpdate})
+  }, [realTimeUpdate])
 
   return (
     <>

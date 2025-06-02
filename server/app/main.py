@@ -1,4 +1,6 @@
-from fastapi import FastAPI
+import asyncio
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from app.db import init_db
 from app.routes.detections import router as detection_router
 from app.rtsp.stream import RTSPStreamManager
@@ -7,6 +9,7 @@ from app.utils.handlers import setup_handlers
 import os
 import json
 from dotenv import load_dotenv
+from datetime import datetime
 
 load_dotenv()
 
@@ -45,14 +48,51 @@ def start_streams():
 
 app = FastAPI(root_path="/api")
 
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173", 
+        "http://localhost", 
+        # "ws://localhost"
+    ],  # dev + traefik + ws
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.on_event("startup")
 def startup():
     init_db()
-    setup_handlers()  # Initialize signal handlers before starting streams
-    start_streams()
+    # setup_handlers()  # Initialize signal handlers before starting streams
+    # start_streams()
 
 app.include_router(detection_router)
 
 @app.get("/")
 def root():
     return {"status": "Pet Tracker API is running"}
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    logger.info(f"New client connected: {websocket}")
+    await websocket.send_json({
+        "timestamp": datetime.now().isoformat(),
+        "type": "ping",
+        "status": "connected",
+        "message": "WebSocket connection established"
+    })
+    try:
+        while True:
+            # data = await websocket.receive_text()
+            await asyncio.sleep(5) # (or send a ping every N seconds)
+            await websocket.send_json({
+                "timestamp": datetime.now().isoformat(),
+                "type": "ping",
+                "status": "active",
+                "message": "WebSocket connection alive"
+            })
+    except WebSocketDisconnect:
+        logger.info("Client disconnected")
+
