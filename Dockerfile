@@ -14,7 +14,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY ./server/app ./app
 
 FROM server-base AS server-dev
-
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
 FROM node:20-slim AS client-base

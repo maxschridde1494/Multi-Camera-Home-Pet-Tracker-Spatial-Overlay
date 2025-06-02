@@ -5,8 +5,7 @@ from sqlmodel import Session, select
 from app.models.detection import Detection
 from app.db import get_session as open_session   # sync helper from db.py
 
-router = APIRouter(prefix="/detections", tags=["Detections"])
-
+router = APIRouter(prefix="", tags=["Detections"])
 
 # ───────── dependency ──────────────────────────────────────────────────────
 def get_db() -> Session:
@@ -16,7 +15,7 @@ def get_db() -> Session:
 
 
 # ───────── endpoints ───────────────────────────────────────────────────────
-@router.post("/")
+@router.post("/detections")
 def create_detection(
     detection: Detection,
     session: Session = Depends(get_db),
@@ -27,7 +26,8 @@ def create_detection(
     return detection
 
 
-@router.get("/")
+@router.get("/detections", response_model=list[Detection])
 def list_detections(session: Session = Depends(get_db)):
-    result = session.execute(select(Detection))
+    result = session.execute(select(Detection).order_by(Detection.timestamp.desc()).limit(10))
+    # result = session.execute(select(Detection))
     return result.scalars().all()

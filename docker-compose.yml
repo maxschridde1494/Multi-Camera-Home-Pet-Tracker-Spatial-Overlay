@@ -52,8 +52,9 @@ services:
       - ./client:/usr/local/app:cached  # Mount application code
       - /usr/local/app/node_modules  # Give container an *anonymous* node_modules volume (keeps Linux-arm64 deps, not overwritten by host)
     labels:
-      traefik.http.routers.client.rule: Host(`localhost`)
+      traefik.http.routers.client.rule: Host(`localhost`) && !PathPrefix(`/api`)
       traefik.http.services.client.loadbalancer.server.port: 5173
+      traefik.http.routers.client.priority: 1 
 
   db:
     image: postgres:17
