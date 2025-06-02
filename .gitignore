@@ -50,3 +50,5 @@ ruff_cache/
 # MediaMTX
 mediamtx.yml
 *snapshots
+
+node_modules/

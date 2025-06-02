@@ -16,3 +16,18 @@ COPY ./server/app ./app
 FROM server-base AS server-dev
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+FROM node:20-slim AS client-base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+WORKDIR /usr/local/app
+COPY ./client/package.json ./client/pnpm-lock.yaml ./
+RUN --mount=type=cache,target=/root/.pnpm-store \
+    pnpm install --frozen-lockfile
+
+FROM client-base AS client-dev
+COPY ./client ./
+EXPOSE 5173 3036
+
+CMD ["pnpm", "run", "dev"]

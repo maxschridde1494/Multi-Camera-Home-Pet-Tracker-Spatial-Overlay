@@ -30,6 +30,17 @@ services:
     volumes:
       - ./server/mediamtx.yml:/mediamtx.yml:ro
 
+  client:
+    build: 
+      context: .
+      target: client-dev
+    ports:
+      - "5173:5173"
+      - "3036:3036"
+    volumes:
+      - ./client:/usr/local/app:cached  # Mount application code
+      - /usr/local/app/node_modules  # Give container an *anonymous* node_modules volume (keeps Linux-arm64 deps, not overwritten by host)
+
   db:
     image: postgres:17
     environment:
