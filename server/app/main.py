@@ -43,7 +43,7 @@ def start_streams():
             confidence_threshold=float(os.getenv("CONFIDENCE_THRESHOLD", "0.9")),
         )
 
-app = FastAPI()
+app = FastAPI(root_path="/api")
 
 @app.on_event("startup")
 def startup():

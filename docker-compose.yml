@@ -1,26 +1,37 @@
 version: "3.9"
 
 services:
+  web-proxy:
+    image: traefik:v2.11
+    command: --providers.docker
+    ports:
+      - 80:80
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
   server:
     build: 
       context: .
       target: server-dev
-    ports:
-      - "8000:8000"
+    # ports:
+    #   - "8000:8000"
     depends_on:
       - db
-      - proxy
+      - stream-proxy
     environment:
       - CAM_PROXY_CONFIG=${CAM_PROXY_CONFIG}
       - ROBOFLOW_API_URL=${ROBOFLOW_API_URL}
       - ROBOFLOW_API_KEY=${ROBOFLOW_API_KEY}
       - ROBOFLOW_MODEL_ID=${ROBOFLOW_MODEL_ID}
-
     volumes:
       - ./server/app:/app
       - ./server/snapshots:/app/snapshots
+    labels:
+      traefik.http.routers.server.rule: Host(`localhost`) && PathPrefix(`/api`)
+      traefik.http.services.server.loadbalancer.server.port: 8000
+      traefik.http.routers.server.priority: 100
   
-  proxy:
+  stream-proxy:
     image: bluenviron/mediamtx:latest
     container_name: rtsp-proxy
     restart: unless-stopped
@@ -40,6 +51,9 @@ services:
     volumes:
       - ./client:/usr/local/app:cached  # Mount application code
       - /usr/local/app/node_modules  # Give container an *anonymous* node_modules volume (keeps Linux-arm64 deps, not overwritten by host)
+    labels:
+      traefik.http.routers.client.rule: Host(`localhost`)
+      traefik.http.services.client.loadbalancer.server.port: 5173
 
   db:
     image: postgres:17
