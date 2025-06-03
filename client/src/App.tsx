@@ -1,17 +1,11 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 import { useRealTime, type RealTimeUpdate, RealTimeMessage } from './hooks/useRealTime'
-import type { Detection, Snapshot } from './types'
+import type { Detection, Snapshot, WebsocketConnectionInit } from './types'
 
 function App() {
   const [last10Detections, setLast10Detections] = useState<Detection[]>([])
-  const [last5Snapshots, setLast5Snapshots] = useState<string[]>([
-    '20250603_044849_office_0.91_pets.jpg',
-    '20250603_044317_kitchen_0.95_pets.jpg',
-    '20250603_042520_living_room_0.95_pets.jpg',
-    '20250603_040336_office_0.90_pets.jpg',
-    '20250603_040154_kitchen_0.91_pets.jpg'
-  ])
+  const [last5Snapshots, setLast5Snapshots] = useState<string[]>([])
   const [currentSnapshotIndex, setCurrentSnapshotIndex] = useState(0)
   const [highConfidenceDetection, setHighConfidenceDetection] = useState<Detection>()
   const realTimeUpdate = useRealTime('ws://localhost:8000/ws')
@@ -23,6 +17,12 @@ function App() {
     if (!data) return
 
     switch (message) {
+      case RealTimeMessage.ConnectionMade:
+        const initData = data as WebsocketConnectionInit
+        setLast10Detections(initData.last_10_detections)
+        setLast5Snapshots(initData.last_5_snapshots)
+        setCurrentSnapshotIndex(0)
+        break
       case RealTimeMessage.DetectionMade:
         setLast10Detections(prev => [(data as Detection), ...prev].slice(0, 10))
         break

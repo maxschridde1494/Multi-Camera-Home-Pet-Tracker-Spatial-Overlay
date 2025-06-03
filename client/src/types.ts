@@ -16,3 +16,8 @@ export interface Detection {
 export interface Snapshot {
   asset_path: string;
 }
+
+export interface WebsocketConnectionInit {
+  last_10_detections: Detection[];
+  last_5_snapshots: string[];
+}

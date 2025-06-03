@@ -13,7 +13,7 @@ from typing import Dict, Optional, List
 import asyncio
 
 from app.utils.logger import get_logger
-from app.utils.signals import detection_made, high_confidence_detection_made, camera_connected, camera_disconnected
+from app.utils.signals import detection_made, high_confidence_detection_made
 from app.roboflow.client import create_client
 from app.rtsp.stream import RTSPStream
 
