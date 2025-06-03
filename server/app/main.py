@@ -3,6 +3,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from app.db import init_db
 from app.routes.detections import router as detection_router
+from app.websockets import router as websocket_router
 from app.rtsp.stream import RTSPStreamManager
 from app.roboflow.detector import RoboflowDetectorManager
 from app.utils.handlers import setup_handlers
@@ -64,31 +65,9 @@ def startup():
     start_streams()
 
 app.include_router(detection_router)
+app.include_router(websocket_router)
 
 @app.get("/")
 def root():
     return {"status": "Pet Tracker API is running"}
-
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    logger.info(f"New client connected: {websocket}")
-    await websocket.send_json({
-        "timestamp": datetime.now().isoformat(),
-        "type": "ping",
-        "status": "connected",
-        "message": "WebSocket connection established"
-    })
-    try:
-        while True:
-            # data = await websocket.receive_text()
-            await asyncio.sleep(5) # (or send a ping every N seconds)
-            await websocket.send_json({
-                "timestamp": datetime.now().isoformat(),
-                "type": "ping",
-                "status": "active",
-                "message": "WebSocket connection alive"
-            })
-    except WebSocketDisconnect:
-        logger.info("Client disconnected")
 
