@@ -12,7 +12,7 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="", tags=["RTP"])
 
-from app.utils.signals import high_confidence_detection_made, detection_made, snapshot_made    # your blinker signal
+from app.utils.signals import high_confidence_detection_made, detection_made, snapshot_made
 _clients: Set[WebSocket] = set()
 
 async def get_initial_data():

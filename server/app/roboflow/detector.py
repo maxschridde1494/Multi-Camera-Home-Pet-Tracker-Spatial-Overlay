@@ -64,18 +64,12 @@ class RoboflowDetector:
         self.thread = threading.Thread(target=self._loop, daemon=True)
         self.thread.start()
         logger.info(f"[{self.camera_id}] detector started")
-        
-        # Signal that camera is connected
-        camera_connected.send(self)
 
     def stop(self) -> None:
         """Stop the detector thread."""
         self.running = False
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=5.0)
-            
-        # Signal that camera is disconnected
-        camera_disconnected.send(self)
 
     async def _process_predictions(self, predictions: List[dict], frame) -> None:
         """Process a list of predictions and emit appropriate signals.

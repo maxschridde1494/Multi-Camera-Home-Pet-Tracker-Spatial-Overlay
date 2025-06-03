@@ -8,23 +8,61 @@ export enum RealTimeMessage {
   ConnectionMade = 'connection_made'
 }
 
-export interface RealTimeUpdate {
+interface RealTimeUpdate {
   timestamp: string;
   status: string;
   message: RealTimeMessage;
   data?: Detection | Snapshot | WebsocketConnectionInit;
 }
 
-export function useRealTime(uri: string) {
-  const [realTimeUpdate, setRealTimeUpdate] = useState<RealTimeUpdate | null>(null);
+interface RealTimeState {
+  last10Detections: Detection[]
+  last5Snapshots: string[]
+  highConfidenceDetection?: Detection
+  isLoading: boolean
+}
+
+export function useRealTime(uri: string): RealTimeState {
+  const [last10Detections, setLast10Detections] = useState<Detection[]>([])
+  const [last5Snapshots, setLast5Snapshots] = useState<string[]>([])
+  const [highConfidenceDetection, setHighConfidenceDetection] = useState<Detection>()
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const ws = new WebSocket(uri);
-    ws.onmessage = (ev) => {
-      setRealTimeUpdate(JSON.parse(ev.data));
-    }
-    return () => ws.close();
-  }, []);
 
-  return realTimeUpdate;
+    ws.onmessage = (ev) => {
+      const realTimeUpdate = JSON.parse(ev.data) as RealTimeUpdate
+      const { data, message } = realTimeUpdate
+      if (!data) return
+
+      switch (message) {
+        case RealTimeMessage.ConnectionMade:
+          const initData = data as WebsocketConnectionInit
+          setLast10Detections(initData.last_10_detections)
+          setLast5Snapshots(initData.last_5_snapshots)
+          setHighConfidenceDetection(initData.last_10_detections[0])
+          setIsLoading(false)
+          break
+        case RealTimeMessage.DetectionMade:
+          setLast10Detections(prev => [(data as Detection), ...prev].slice(0, 10))
+          break
+        case RealTimeMessage.HighConfidenceDetectionMade:
+          setHighConfidenceDetection(data as Detection)
+          break
+        case RealTimeMessage.SnapshotMade:
+          setLast5Snapshots(prev => [(data as Snapshot).asset_path, ...prev].slice(0, 5))
+          break
+      }
+    }
+
+    return () => ws.close();
+  }, [uri]);
+
+  return {
+    last10Detections,
+    last5Snapshots,
+    highConfidenceDetection,
+    isLoading
+  }
 }
