@@ -10,6 +10,7 @@ import threading
 import time
 from datetime import datetime
 from typing import Dict, Optional, List
+import asyncio
 
 from app.utils.logger import get_logger
 from app.utils.signals import detection_made, high_confidence_detection_made, camera_connected, camera_disconnected
@@ -28,6 +29,7 @@ class RoboflowDetector:
         model_id: str,
         confidence_threshold: float = 0.9,
         interval: float = 1.0,
+        loop: asyncio.AbstractEventLoop = None,
     ):
         """Initialize the detector.
         
@@ -36,12 +38,14 @@ class RoboflowDetector:
             model_id: Roboflow model ID (e.g., "home-pet-detection/3")
             confidence_threshold: Minimum confidence for detections
             interval: Seconds between inference runs
+            loop: asyncio.AbstractEventLoop to use for async operations
         """
         self.stream = stream
         self.model_id = model_id
         self.confidence_threshold = confidence_threshold
         self.interval = interval
-        
+        self.loop = loop
+
         # State
         self.running = False
         self.client = create_client()
@@ -73,7 +77,7 @@ class RoboflowDetector:
         # Signal that camera is disconnected
         camera_disconnected.send(self)
 
-    def _process_predictions(self, predictions: List[dict], frame) -> None:
+    async def _process_predictions(self, predictions: List[dict], frame) -> None:
         """Process a list of predictions and emit appropriate signals.
         
         Args:
@@ -83,38 +87,39 @@ class RoboflowDetector:
         current_time = datetime.now()
         
         for prediction in predictions:
-            # Extract basic prediction data
-            confidence = prediction["confidence"]
-            
-            # Prepare complete detection data
-            detection_data = {
-                "detection_id": prediction["detection_id"],
-                "timestamp": current_time,
-                "model_id": self.model_id,
-                "camera_id": self.camera_id,
-                "x": prediction["x"],
-                "y": prediction["y"],
-                "width": prediction["width"],
-                "height": prediction["height"],
-                "confidence": confidence,
-                "class_name": prediction["class"],
-                "class_id": prediction["class_id"]
-            }
-            
-            # Always emit detection_made signal for each prediction
-            detection_made.send(
-                self,
-                frame=frame,
-                **detection_data
-            )
+            try:
+                # Extract basic prediction data
+                confidence = prediction["confidence"]
+                
+                # Prepare complete detection data
+                detection_data = {
+                    "detection_id": prediction["detection_id"],
+                    "timestamp": current_time,
+                    "model_id": self.model_id,
+                    "camera_id": self.camera_id,
+                    "x": prediction["x"],
+                    "y": prediction["y"],
+                    "width": prediction["width"],
+                    "height": prediction["height"],
+                    "confidence": confidence,
+                    "class_name": prediction["class"],
+                    "class_id": prediction["class_id"]
+                }
 
-            # Emit high confidence signal if threshold met
-            if confidence > self.confidence_threshold:
-                high_confidence_detection_made.send(
-                    self,
-                    frame=frame,
-                    **detection_data
+                # or (blinker 1.7)
+                await detection_made.send_async(
+                    self, frame=frame, **detection_data
                 )
+
+                # Emit high confidence signal if threshold met
+                if confidence > self.confidence_threshold:
+                    await high_confidence_detection_made.send_async(
+                        self,
+                        frame=frame,
+                        **detection_data
+                    )
+            except Exception as e:
+                logger.error(f"Error processing predictions: {e}\n{prediction}")
 
     def _loop(self) -> None:
         """Main detection loop."""
@@ -130,7 +135,8 @@ class RoboflowDetector:
 
                     # Check for predictions
                     if predictions := prediction.get("predictions", []):
-                        self._process_predictions(predictions, frame)
+                        coro = self._process_predictions(predictions, frame)
+                        asyncio.run_coroutine_threadsafe(coro, self.loop)
                                 
                 except Exception as e:
                     logger.error(f"Error processing frame: {e}")
@@ -162,6 +168,7 @@ class RoboflowDetectorManager:
         model_id: str,
         confidence_threshold: float = 0.9,
         interval: float = 1.0,
+        loop: asyncio.AbstractEventLoop = None,
     ) -> None:
         """Add a detector for a stream.
         
@@ -182,6 +189,7 @@ class RoboflowDetectorManager:
             model_id=model_id,
             confidence_threshold=confidence_threshold,
             interval=interval,
+            loop=loop
         )
         
         detector.start()

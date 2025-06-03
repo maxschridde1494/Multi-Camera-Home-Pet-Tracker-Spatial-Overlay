@@ -4,16 +4,17 @@ Signal handlers for the detection system.
 This module contains all the handler functions that respond to various signals
 in the detection system.
 """
-import os
-import cv2
+import os, cv2
 from uuid import UUID
+
 from app.utils.logger import get_logger
 from app.models import Detection
 from app.db import get_session
+from app.utils.signals import snapshot_made
 
 logger = get_logger(__name__)
 
-def handle_snapshot_storage(sender, frame, **kwargs):
+async def handle_snapshot_storage(sender, frame, **kwargs):
     """Handle storing snapshots for high confidence detections."""
     try:
         # Format timestamp for filename
@@ -29,12 +30,16 @@ def handle_snapshot_storage(sender, frame, **kwargs):
         
         # Save with good quality for detection images
         cv2.imwrite(filepath, frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
-        logger.info(f"Saved high confidence detection snapshot: {filename}")
+        logger.info(f"\nhandle_snapshot_storage:\nSaved high confidence detection snapshot: {filename}\n")
+
+        await snapshot_made.send_async(
+            sender, frame=frame, asset_path=filename
+        )
         
     except Exception as e:
         logger.error(f"Error saving detection snapshot: {e}")
 
-def handle_detection_storage(sender, frame, **kwargs):
+async def handle_detection_storage(sender, frame, **kwargs):
     """Handle storing detection metadata in the database."""
     try:
         # Convert UUID string to UUID object if needed
@@ -50,32 +55,22 @@ def handle_detection_storage(sender, frame, **kwargs):
             
         # Log detection info
         logger.info(
-            f"Detection {kwargs['detection_id']} at {kwargs['timestamp']}: "
+            f"\nhandle_detection_storage:\nDetection {kwargs['detection_id']} at {kwargs['timestamp']}: "
             f"camera={kwargs['camera_id']}, model={kwargs['model_id']}, "
             f"class={kwargs['class_name']}({kwargs['class_id']}), "
-            f"conf={kwargs['confidence']:.2f}"
+            f"conf={kwargs['confidence']:.2f}\n"
         )
         
     except Exception as e:
         logger.error(f"Error handling detection storage: {e}")
 
-def handle_camera_status(sender, connected, **kwargs):
-    """Log camera connection status changes."""
-    status = "connected" if connected else "disconnected"
-    camera_id = sender.camera_id if hasattr(sender, 'camera_id') else 'unknown'
-    logger.info(f"Camera {camera_id} {status}")
-
-def setup_handlers():
+async def setup_handlers():
     """Initialize all signal handlers."""
     from app.utils.signals import (
         detection_made,
         high_confidence_detection_made,
-        # camera_connected,
-        # camera_disconnected
     )
     
     # Connect handlers to signals
     detection_made.connect(handle_detection_storage)
     high_confidence_detection_made.connect(handle_snapshot_storage)
-    # camera_connected.connect(handle_camera_status, connected=True)
-    # camera_disconnected.connect(handle_camera_status, connected=False) 

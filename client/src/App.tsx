@@ -1,81 +1,138 @@
 import { useEffect, useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
-import { simpleFetch } from './clients/fetch'
-import { useRealTime } from './hooks/useRealTime'
-
-interface Detection {
-  id: number;
-  detection_id: string;  // UUID
-  timestamp: string;     // datetime
-  model_id: string;
-  camera_id: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  confidence: number;
-  class_name: string;
-  class_id: number;
-}
+import { useRealTime, type RealTimeUpdate, RealTimeMessage } from './hooks/useRealTime'
+import type { Detection, Snapshot } from './types'
 
 function App() {
-  const [count, setCount] = useState(0)
-  const [detections, setDetections] = useState<Detection[]>([])
+  const [last10Detections, setLast10Detections] = useState<Detection[]>([])
+  const [last5Snapshots, setLast5Snapshots] = useState<string[]>([
+    '20250603_044849_office_0.91_pets.jpg',
+    '20250603_044317_kitchen_0.95_pets.jpg',
+    '20250603_042520_living_room_0.95_pets.jpg',
+    '20250603_040336_office_0.90_pets.jpg',
+    '20250603_040154_kitchen_0.91_pets.jpg'
+  ])
+  const [currentSnapshotIndex, setCurrentSnapshotIndex] = useState(0)
+  const [highConfidenceDetection, setHighConfidenceDetection] = useState<Detection>()
   const realTimeUpdate = useRealTime('ws://localhost:8000/ws')
 
-  useEffect(() => {
-    const fetchDetections = () => {
-      simpleFetch({
-        url: 'http://localhost:8000/api/detections',
-        onSuccess: (data) => {
-          setDetections(data)
-        },
-        onError: (error) => {
-          console.error('Error fetching detections:', error)
-        }
-      })
+  const handleRealTimeUpdate = (realTimeUpdate: RealTimeUpdate) => {
+    if (!realTimeUpdate) return
+
+    const { data, message } = realTimeUpdate
+    if (!data) return
+
+    switch (message) {
+      case RealTimeMessage.DetectionMade:
+        setLast10Detections(prev => [(data as Detection), ...prev].slice(0, 10))
+        break
+      case RealTimeMessage.HighConfidenceDetectionMade:
+        setHighConfidenceDetection(data as Detection)
+        break
+      case RealTimeMessage.SnapshotMade:
+        setLast5Snapshots(prev => [(data as Snapshot).asset_path, ...prev].slice(0, 5))
+        setCurrentSnapshotIndex(0) // Reset to latest image
+        break
     }
+  } 
 
-    fetchDetections()
+  const nextSnapshot = () => {
+    setCurrentSnapshotIndex(prev => 
+      prev === last5Snapshots.length - 1 ? 0 : prev + 1
+    )
+  }
 
-    const intervalId = setInterval(fetchDetections, 5000)
-
-    return () => clearInterval(intervalId)
-  }, []) 
+  const previousSnapshot = () => {
+    setCurrentSnapshotIndex(prev => 
+      prev === 0 ? last5Snapshots.length - 1 : prev - 1
+    )
+  }
 
   useEffect(() => {
-    console.log(detections)
-  }, [detections])
-
-  useEffect(() => {
-    console.log({realTimeUpdate})
+    if (realTimeUpdate) handleRealTimeUpdate(realTimeUpdate)
   }, [realTimeUpdate])
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="detection-container">
+      <h1>Pet Detection Log</h1>
+      
+      {highConfidenceDetection && (
+        <div className="high-confidence-log">
+          <h2>High Confidence Detection</h2>
+          <div className="log-entry highlight">
+            <div className="entry-header">
+              {new Date(highConfidenceDetection.timestamp).toLocaleString()} | Camera {highConfidenceDetection.camera_id}
+            </div>
+            <div className="entry-message">
+              {(highConfidenceDetection.confidence * 100).toFixed(1)}% confidence {highConfidenceDetection.class_name} seen
+            </div>
+          </div>
+        </div>
+      )}
+
+      {last5Snapshots.length > 0 && (
+        <div className="carousel">
+          <button 
+            className="carousel-button prev" 
+            onClick={previousSnapshot}
+            disabled={last5Snapshots.length <= 1}
+          >
+            ←
+          </button>
+          
+          <div className="carousel-container">
+            <img 
+              src={`http://localhost:8000/api/assets/${last5Snapshots[currentSnapshotIndex]}`} 
+              alt={`Detection ${currentSnapshotIndex + 1} of ${last5Snapshots.length}`} 
+              className="detection-image"
+            />
+            <div className="carousel-indicator">
+              {last5Snapshots.map((_, index) => (
+                <button
+                  key={index}
+                  className={`indicator ${index === currentSnapshotIndex ? 'active' : ''}`}
+                  onClick={() => setCurrentSnapshotIndex(index)}
+                />
+              ))}
+            </div>
+          </div>
+
+          <button 
+            className="carousel-button next" 
+            onClick={nextSnapshot}
+            disabled={last5Snapshots.length <= 1}
+          >
+            →
+          </button>
+        </div>
+      )}
+      
+      <div className="activity-log">
+        <h2>Recent Detections</h2>
+        <div className="log-entries">
+          {last10Detections.map(detection => (
+            <div key={detection.detection_id} className="log-entry">
+              <div className="entry-header">
+                {new Date(detection.timestamp).toLocaleString()} | Camera {detection.camera_id}
+              </div>
+              <div className="entry-message">
+                {(detection.confidence * 100).toFixed(1)}% confidence {detection.class_name} seen
+              </div>
+            </div>
+          ))}
+          {Array.from({ length: Math.max(0, 10 - last10Detections.length) }).map((_, i) => (
+            <div key={`empty-${i}`} className="log-entry empty">
+              <div className="entry-header">
+                -- | --
+              </div>
+              <div className="entry-message">
+                Waiting for detection...
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </div>
   )
 }
 

@@ -9,8 +9,4 @@ from blinker import signal
 # Detection events
 detection_made = signal('detection.made')  # Emitted for any detection
 high_confidence_detection_made = signal('detection.high_confidence')  # Emitted only for high confidence detections
-
-# System events
-camera_connected = signal('camera.connected')
-camera_disconnected = signal('camera.disconnected')
-system_shutdown = signal('system.shutdown') 
+snapshot_made = signal('snapshot.made')  # Emitted for any snapshot

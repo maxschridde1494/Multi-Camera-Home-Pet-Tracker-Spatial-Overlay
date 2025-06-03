@@ -1,7 +1,7 @@
 from sqlmodel import SQLModel, Session, create_engine
 
 DATABASE_URL = "postgresql+psycopg2://postgres:postgres@db:5432/pettracker"
-engine = create_engine(DATABASE_URL, echo=False)
+engine = create_engine(DATABASE_URL, echo=True)
 
 def init_db():
     SQLModel.metadata.create_all(engine)
