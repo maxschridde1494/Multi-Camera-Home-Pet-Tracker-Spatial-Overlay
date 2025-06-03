@@ -1,20 +1,13 @@
 version: "3.9"
 
 services:
-  web-proxy:
-    image: traefik:v2.11
-    command: --providers.docker
-    ports:
-      - 80:80
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-
   server:
     build: 
       context: .
       target: server-dev
-    # ports:
-    #   - "8000:8000"
+    container_name: server
+    ports:
+      - "8000:8000"
     depends_on:
       - db
       - stream-proxy
@@ -26,10 +19,6 @@ services:
     volumes:
       - ./server/app:/app
       - ./server/snapshots:/app/snapshots
-    labels:
-      traefik.http.routers.server.rule: Host(`localhost`) && PathPrefix(`/api`)
-      traefik.http.services.server.loadbalancer.server.port: 8000
-      traefik.http.routers.server.priority: 100
   
   stream-proxy:
     image: bluenviron/mediamtx:latest
@@ -45,19 +34,17 @@ services:
     build: 
       context: .
       target: client-dev
+    container_name: client
     ports:
       - "5173:5173"
       - "3036:3036"
     volumes:
-      - ./client:/usr/local/app:cached  # Mount application code
-      - /usr/local/app/node_modules  # Give container an *anonymous* node_modules volume (keeps Linux-arm64 deps, not overwritten by host)
-    labels:
-      traefik.http.routers.client.rule: Host(`localhost`) && !PathPrefix(`/api`)
-      traefik.http.services.client.loadbalancer.server.port: 5173
-      traefik.http.routers.client.priority: 1 
+      - ./client:/usr/local/app:cached
+      - /usr/local/app/node_modules # keep container's node_modules, don't let host override
 
   db:
     image: postgres:17
+    container_name: db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres

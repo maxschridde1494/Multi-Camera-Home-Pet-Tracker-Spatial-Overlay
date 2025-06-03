@@ -23,12 +23,12 @@ interface Detection {
 function App() {
   const [count, setCount] = useState(0)
   const [detections, setDetections] = useState<Detection[]>([])
-  const realTimeUpdate = useRealTime('/ws')
+  const realTimeUpdate = useRealTime('ws://localhost:8000/ws')
 
   useEffect(() => {
     const fetchDetections = () => {
       simpleFetch({
-        url: '/api/detections',
+        url: 'http://localhost:8000/api/detections',
         onSuccess: (data) => {
           setDetections(data)
         },

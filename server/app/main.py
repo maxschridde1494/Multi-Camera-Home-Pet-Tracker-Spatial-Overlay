@@ -51,11 +51,7 @@ app = FastAPI(root_path="/api")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173", 
-        "http://localhost", 
-        # "ws://localhost"
-    ],  # dev + traefik + ws
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -64,8 +60,8 @@ app.add_middleware(
 @app.on_event("startup")
 def startup():
     init_db()
-    # setup_handlers()  # Initialize signal handlers before starting streams
-    # start_streams()
+    setup_handlers()  # Initialize signal handlers before starting streams
+    start_streams()
 
 app.include_router(detection_router)
 

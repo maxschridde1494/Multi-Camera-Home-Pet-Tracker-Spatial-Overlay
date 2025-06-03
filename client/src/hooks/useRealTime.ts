@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 
-export function useRealTime(path: string) {
+export function useRealTime(uri: string) {
   const [realTimeUpdate, setRealTimeUpdate] = useState<string | null>(null);
 
   useEffect(() => {
-    const loc = window.location.origin.replace(/^http/, "ws");
-    const ws  = new WebSocket(`${loc}/api${path}`);
+    const ws  = new WebSocket(uri);
     ws.onmessage = (ev) => {
       setRealTimeUpdate(JSON.parse(ev.data));
     }
