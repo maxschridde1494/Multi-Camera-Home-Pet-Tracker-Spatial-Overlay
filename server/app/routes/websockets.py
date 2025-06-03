@@ -94,7 +94,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
 # broadcast on every detection
 @high_confidence_detection_made.connect
-async def publish_now(sender, frame, **kw):
+async def publish_high_confidence(sender, frame, **kw):
     kw["timestamp"] = kw["timestamp"].isoformat()
 
     for websocket in list(_clients):
@@ -109,7 +109,8 @@ async def publish_now(sender, frame, **kw):
             logger.error(f"{type(e)} error sending detection to client: {e}")
 
 @detection_made.connect
-async def publish_now(sender, frame, **kw):
+async def publish_detection(sender, frame, **kw):
+    logger.info(f"WS: detection_made: {kw}")
     kw["timestamp"] = kw["timestamp"].isoformat()
 
     for websocket in list(_clients):
@@ -124,7 +125,7 @@ async def publish_now(sender, frame, **kw):
             logger.error(f"{type(e)} error sending detection to client: {e}")
 
 @snapshot_made.connect
-async def publish_now(sender, frame, **kw):
+async def publish_snapshot(sender, frame, **kw):
     for websocket in list(_clients):
         try:
           await websocket.send_json({
