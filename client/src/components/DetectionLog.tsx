@@ -1,4 +1,5 @@
 import type { Detection } from '../types'
+import { formatLocalTime } from '../utils/dateUtils'
 
 interface DetectionLogProps {
   detections: Detection[]
@@ -12,7 +13,7 @@ export const DetectionLog = ({ detections }: DetectionLogProps) => {
         {detections.map(detection => (
           <div key={detection.detection_id} className="log-entry">
             <div className="entry-header">
-              {new Date(detection.timestamp).toLocaleString()} | {detection.camera_id}
+              {formatLocalTime(detection.timestamp)} | {detection.camera_id}
             </div>
             <div className="entry-message">
               {(detection.confidence * 100).toFixed(1)}% confidence {detection.class_name} seen

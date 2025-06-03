@@ -1,4 +1,5 @@
 import type { Detection } from '../types'
+import { formatLocalTime } from '../utils/dateUtils'
 
 interface CurrentLocationProps {
   detection?: Detection
@@ -12,7 +13,7 @@ export const CurrentLocation = ({ detection, snapshotPath }: CurrentLocationProp
     <div className="high-confidence-log">
       <h2>Currently in the {detection.camera_id}</h2>
       <div className="timestamp-header">
-        {new Date(detection.timestamp).toLocaleString()} | {(detection.confidence * 100).toFixed(1)}% Confidence
+        {formatLocalTime(detection.timestamp)} | {(detection.confidence * 100).toFixed(1)}% Confidence
       </div>
       {snapshotPath && (
         <div className="current-detection">

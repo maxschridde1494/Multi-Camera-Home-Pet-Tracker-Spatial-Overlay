@@ -41,7 +41,6 @@ export function useRealTime(uri: string): RealTimeState {
           const initData = data as WebsocketConnectionInit
           setLast10Detections(initData.last_10_detections)
           setLast5Snapshots(initData.last_5_snapshots)
-          setHighConfidenceDetection(initData.last_10_detections[0])
           setIsLoading(false)
           break
         case RealTimeMessage.DetectionMade:

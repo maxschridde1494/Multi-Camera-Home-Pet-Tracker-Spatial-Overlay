@@ -110,7 +110,6 @@ async def publish_high_confidence(sender, frame, **kw):
 
 @detection_made.connect
 async def publish_detection(sender, frame, **kw):
-    logger.info(f"WS: detection_made: {kw}")
     kw["timestamp"] = kw["timestamp"].isoformat()
 
     for websocket in list(_clients):
