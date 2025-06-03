@@ -23,7 +23,7 @@ dist/
 # Python environment metadata
 *.log
 pip-log.txt
-.env*
+.env
 
 # Docker
 *.pid
