@@ -39,8 +39,8 @@ services:
       - "5173:5173"
       - "3036:3036"
     volumes:
-      - ./client:/usr/local/app:cached
-      - /usr/local/app/node_modules # keep container's node_modules, don't let host override
+      - ./client:/app:cached
+      - /app/node_modules # keep container's node_modules, don't let host override
 
   db:
     image: postgres:17
