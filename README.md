@@ -29,6 +29,55 @@ Track the real-time movements of Piper (my dog) across multiple rooms and outdoo
 - Carousel of 5 most recent snapshots
 - Activy stream of last 10 predictions
 
+## Phase 2: Spatial Analytics & Visualization
+
+### Overview
+Transform raw detection data into meaningful spatial insights by overlaying movement patterns on a house blueprint. This phase focuses on advanced visualization, spatial analysis, and automated insights generation.
+
+### Core Features
+
+#### 1. Spatial Mapping Infrastructure
+- **House Layout Integration**
+  - Support for PNG/SVG floorplans or JSON layout definitions
+  - Manual or automated room boundary scanning
+  - Coordinate system mapping for each room
+- **Position Triangulation**
+  - Multi-camera detection reconciliation
+  - Advanced position interpolation for coverage gaps
+  - Confidence-weighted position estimation
+
+#### 2. Movement Visualization
+- **Real-time Overlay**
+  - Live position indicator on floorplan
+  - Smooth motion trails with time decay
+  - Interactive timeline scrubber
+- **Historical Analysis**
+  - Heat map generation for activity density
+  - Time-lapse playback of movement patterns
+  - Customizable time window selection
+
+#### 3. Automated Insights
+- **Smart Alerts**
+  - Configurable zone-based notifications via Slack
+  - Intelligent event detection (e.g., outdoor stays > 60s)
+  - Anomaly detection for unusual patterns
+- **Analytics Dashboard**
+  - Daily/weekly activity summaries
+  - Room occupancy statistics
+  - Pattern analysis and trends
+
+### Future Extensibility
+- Multi-pet tracking support
+- API endpoints for external integrations
+- Custom event definition framework
+
+### Implementation Priorities
+1. Basic floorplan overlay with real-time position
+2. Historical path visualization
+3. Analytics dashboard
+4. Smart alerts and notifications
+5. Advanced features (multi-pet, API, etc.)
+
 ## Configuration
 
 Before running the application, you need to set up two configuration files:
