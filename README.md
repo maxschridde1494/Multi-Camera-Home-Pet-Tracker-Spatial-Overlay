@@ -29,6 +29,9 @@ Track the real-time movements of Piper (my dog) across multiple rooms and outdoo
 - Carousel of 5 most recent snapshots
 - Activy stream of last 10 predictions
 
+####
+![Demo](assets/demo.png)
+
 ## Phase 2: Spatial Analytics & Visualization
 
 ### Overview
